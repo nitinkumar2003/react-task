@@ -1,0 +1,132 @@
+.wrapper {
+  max-width: 640px;
+}
+
+.summary {
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+
+.section {
+  margin-bottom: 1.5rem;
+}
+
+.heading {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.chipList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  font-family: var(--mono);
+}
+
+.accordion {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.accordionItem {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.accordionItem:last-child {
+  border-bottom: none;
+}
+
+.accordionTrigger {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--text-h);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.75rem 0.9rem;
+  cursor: pointer;
+}
+
+.accordionTrigger:hover {
+  background: var(--bg-subtle);
+}
+
+.accordionIcon,
+.accordionIconOpen {
+  flex-shrink: 0;
+  color: var(--accent);
+  transition: transform 0.15s ease;
+  margin-top: 0.15rem;
+}
+
+.accordionIconOpen {
+  transform: rotate(90deg);
+}
+
+.accordionAnswer {
+  margin: 0;
+  padding: 0 0.9rem 0.9rem 2.35rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.snippetList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.snippet {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.snippetTitle {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-h);
+  padding: 0.6rem 0.9rem;
+  margin: 0;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.codeBlock {
+  margin: 0;
+  padding: 0.9rem;
+  overflow-x: auto;
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.snippetExplanation {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+}

@@ -23,6 +23,8 @@ npm install
 npm run dev      # start the app
 npm run build    # type-check + production build
 npm run lint      # oxlint
+npm test          # run all tests once (Vitest + React Testing Library)
+npm run test:watch
 ```
 
 ## Interview prep (`interview-prep/`)

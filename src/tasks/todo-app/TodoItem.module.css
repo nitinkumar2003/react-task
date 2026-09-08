@@ -1,0 +1,75 @@
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+/* @@ deliberately neutral grey — the purple accent is reserved for the
+   "done" toggle below, so the two controls read as different things */
+.selectBox {
+  accent-color: var(--text-muted);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.doneToggle,
+.doneToggleChecked {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: transparent;
+  color: #fff;
+  font-size: 0.7rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.doneToggle:hover {
+  border-color: var(--accent);
+}
+
+.doneToggleChecked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.completed {
+  flex: 1;
+  word-break: break-word;
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.deleteButton {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+}
+
+.deleteButton:hover {
+  background: var(--bg-subtle);
+  color: var(--text-h);
+}

@@ -1,15 +1,130 @@
 .wrapper {
-  display: flex;
-  min-height: 200px;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed var(--border-color);
-  border-radius: 8px;
-  padding: 2rem;
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: left;
 }
 
-.placeholder {
-  color: var(--text-muted);
+.form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.input {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
   font-size: 0.95rem;
+}
+
+.addButton {
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filterButton,
+.filterButtonActive {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.filterButtonActive {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.bulkBar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-subtle);
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.bulkBar button {
+  border: 1px solid var(--border-color);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.bulkBar button:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+
+.bulkBar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bulkBar button:disabled:hover {
+  background: var(--bg);
+  border-color: var(--border-color);
+}
+
+.selectAll {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.selectedCount {
+  color: var(--text-muted);
+}
+
+.clearCompleted {
+  margin-left: auto;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.empty {
+  padding: 1.5rem;
   text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
