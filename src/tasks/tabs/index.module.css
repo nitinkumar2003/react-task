@@ -1,0 +1,15 @@
+.wrapper {
+  display: flex;
+  min-height: 200px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 2rem;
+}
+
+.placeholder {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  text-align: center;
+}
