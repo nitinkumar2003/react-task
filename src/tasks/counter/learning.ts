@@ -133,88 +133,57 @@ if (prevBounds.min !== min || prevBounds.max !== max) {
   ],
 
   interviewQuestions: [
+    // ── fundamentals first — plain-English versions of every concept this
+    // task uses, before the scenario-based questions below ──
     {
-      question:
-        'Walk through what happens, step by step, when a user backspaces "10" and types "5" into a plain `<input value={max} onChange={e => setMax(Number(e.target.value))}>` that feeds a clamp effect.',
+      question: 'What is state in React (useState)?',
       answer:
-        'Backspacing to empty fires an onChange with `e.target.value === \'\'`. `Number(\'\')` is `0`, not NaN, ' +
-        'so `setMax(0)` actually commits. Any effect with `max` in its dependency array re-runs immediately ' +
-        'with `max = 0` — in this component, that\'s the clamp effect, which pulls `count` down to whatever ' +
-        '`clamp(count, min, 0)` is (likely 0). Then the user types "5": onChange fires again with `Number(\'5\') ' +
-        '=== 5`, `setMax(5)` commits, the effect reruns with the real target value — but `count` was already ' +
-        'destroyed by the intermediate `0` and has no way to recover the number it held before the edit started.',
+        'State is a value a component keeps track of that can change over time and, when it changes, makes ' +
+        'the component redraw itself. `const [count, setCount] = useState(0)` gives you `count` (the current ' +
+        'value, starting at 0) and `setCount` (the only correct way to change it). Calling `setCount(5)` tells ' +
+        'React "this component\'s state is now 5, please re-run it and update the screen" — you never change ' +
+        '`count` directly, only through `setCount`.',
     },
     {
-      question:
-        'Why does buffering the input\'s text in separate state (draft vs. value) fix this, instead of e.g. adding a guard like `if (e.target.value !== \'\') setMax(...)`?',
+      question: 'What is a "controlled component" / controlled input?',
       answer:
-        'That guard alone actually does fix *this specific* bug (it stops the 0 from ever committing) — but ' +
-        'it leaves the input semi-broken: if the field only commits on valid numbers, an `<input value={max}>` ' +
-        'bound directly to the numeric state would refuse to visually go blank at all, since React re-renders ' +
-        'it with the old `max` on every keystroke that doesn\'t parse. You\'d never be able to clear the box to ' +
-        'retype in the first place — the last character would keep "snapping back". The draft/value split ' +
-        'fixes both problems at once: the input always shows literally what was typed (even "", even "-"), ' +
-        'and downstream logic only ever sees fully-committed numbers.',
+        'An input whose displayed value comes entirely from React state, not from the browser\'s own memory of ' +
+        'what you typed. You write `value={someState}`, and update `someState` via the input\'s `onChange`. ' +
+        'Because the input\'s value is 100% controlled by state, if you forget to update state in `onChange`, ' +
+        'the field will look "stuck" — you can type, but nothing changes, because React keeps re-rendering it ' +
+        'back to the same old state value.',
     },
     {
-      question:
-        'Why is `setCount(prev => clamp(prev + step, min, max))` used instead of `setCount(clamp(count + step, min, max))`?',
+      question: 'What is onChange, and what is `e.target.value`?',
       answer:
-        'The functional form reads the *actual latest* state at the moment React applies the update, not ' +
-        'whatever `count` happened to be when the click handler was created. If a user clicks Increment ' +
-        'several times in quick succession (or two updates get batched together), each functional update ' +
-        'chains off the previous one\'s result — nothing gets lost. `setCount(clamp(count + step, ...))` ' +
-        'closes over `count` from the render the click handler was created in; if two clicks somehow got ' +
-        'processed before a re-render reflected the first one, the second click would compute from stale data.',
+        '`onChange` is an event handler that React calls every time an input\'s value changes — mainly while ' +
+        'typing, but also for checkboxes, selects, etc. React passes the handler an event object `e`; ' +
+        '`e.target.value` is the current text sitting in that field at that exact moment (as a string, even ' +
+        'for `type="number"` inputs — you usually convert it with `Number(...)`).',
     },
     {
-      question:
-        'The clamp-on-bounds-change logic used to be `useEffect(() => setCount(clamp(...)), [min, max])`. What\'s actually wrong with that, and what replaced it?',
+      question: 'What does the "disabled" attribute do on a button?',
       answer:
-        'It works, but pays for a round trip it doesn\'t need: React commits a render with the OLD (now stale) ' +
-        'count, paints it, THEN runs the effect, which calls setState, which triggers a second render that ' +
-        'finally shows the corrected count. For a fraction of a second the user can see an out-of-range number ' +
-        'flash on screen. It\'s also exactly the shape oxlint\'s `react(set-state-in-effect)` rule exists to ' +
-        'catch — "setState synchronously inside an effect" is a strong signal the value should\'ve been derived ' +
-        'during render instead. The replacement compares `min`/`max` against a `prevBounds` snapshot kept in ' +
-        'state, and if they differ, calls `setCount` *during* the render itself (not in an effect). React ' +
-        'detects the mid-render setState, discards that render\'s output, and immediately re-renders with the ' +
-        'corrected value — so the corrected count is what actually reaches the screen, with no stale flash and ' +
-        'no extra effect pass.',
+        'It greys the button out visually AND makes the browser block clicks on it entirely — your `onClick` ' +
+        'handler never even runs. It\'s used here on the +/− buttons at the min/max boundary: instead of ' +
+        'letting the user click and having clamp() silently do nothing, the button itself visibly tells them ' +
+        '"you can\'t go further" before they even try.',
     },
     {
-      question:
-        'The increment/decrement buttons get `disabled` when at the boundary — why not just let clamp() silently absorb clicks past the limit instead of disabling the button?',
+      question: 'What is a "re-render" in React?',
       answer:
-        'Functionally, clamp() alone is enough to prevent the count from going out of range — clicking ' +
-        '"+" at max would just clamp back to max, a no-op. But an enabled button that does nothing is a ' +
-        'usability smell: it invites another click, tells the user nothing, and fails basic accessibility ' +
-        'expectations (a screen reader user gets no signal that they\'ve hit a wall). `disabled` communicates ' +
-        'the boundary directly through the UI instead of making the user discover it by trial and error.',
+        'Whenever state changes (via a `set...` function from `useState`), React calls your component function ' +
+        'again to compute what the UI should look like now, then updates only the parts of the actual browser ' +
+        'DOM that are different from before. That whole cycle — re-running the function, figuring out what ' +
+        'changed, updating the real DOM — is called a re-render.',
     },
     {
-      question:
-        'What happens if min > max (e.g. someone sets min to 20 while max is still 10)? Why disable the whole control instead of, say, swapping min and max automatically?',
+      question: 'What does "clamping" a value mean?',
       answer:
-        'Auto-swapping is tempting but creates a worse problem: the moment min and max cross, whichever field ' +
-        'the user is actively mid-edit in would start jumping to a value they didn\'t type, fighting their ' +
-        'cursor. This component instead treats min > max as an explicit invalid-configuration state: both ' +
-        'buttons disable, and a `role="alert"` message explains why — same instinct as the disabled-button ' +
-        'answer above, surfaced through the UI rather than silently "fixed" behind the user\'s back.',
-    },
-    {
-      question:
-        'The count field itself (not min/max/step) uses a different pattern — it clamps only on blur, not via the draft/value split. Why not reuse useNumberField for it too?',
-      answer:
-        'useNumberField solves "don\'t let a transient invalid string leak into other logic" — which is ' +
-        'exactly the min/max/step problem. The count field has a different requirement: it *is* allowed to ' +
-        'temporarily hold an out-of-range value while typing (e.g. typing "10" digit-by-digit into a [0,10] ' +
-        'field passes through "1" first, which is in range, so that particular field is less exposed — but ' +
-        'typing into a [0,5] field the same way would pass through "10" as an intermediate value before ' +
-        'backspacing). It intentionally does NOT clamp until blur, specifically so multi-digit typing isn\'t ' +
-        'fought at every keystroke, then corrects on blur. Same philosophy (don\'t punish an in-progress ' +
-        'edit), different mechanism, because the two fields have different jobs — one just needs to hold a ' +
-        'valid number, the other needs to hold a number that stays *inside a range* by the time you\'re done.',
+        'Restricting a number into a range: if it\'s below the minimum, snap it up to the minimum; if it\'s ' +
+        'above the maximum, snap it down to the maximum; otherwise leave it as-is. This component\'s whole ' +
+        '`clamp` function is one line: `Math.min(max, Math.max(min, value))` — the inner `Math.max` enforces ' +
+        'the floor, the outer `Math.min` enforces the ceiling.',
     },
   ],
 }

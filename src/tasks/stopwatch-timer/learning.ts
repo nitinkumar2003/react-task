@@ -115,74 +115,78 @@ it('accumulates elapsed time from wall-clock deltas', async () => {
   ],
 
   interviewQuestions: [
+    // ── fundamentals first — the plain-English version of every concept
+    // this task uses, before the scenario-based questions below that
+    // assume you already know these ──
     {
-      question:
-        'Why can\'t you just do `setElapsed(prev => prev + 50)` inside setInterval(fn, 50)? It sounds correct.',
+      question: 'What is useState?',
       answer:
-        'It assumes the browser calls your callback at *exactly* 50ms intervals, which it doesn\'t guarantee — ' +
-        'it guarantees "no sooner than 50ms". Under load, or when the tab is backgrounded (browsers throttle ' +
-        'timers in inactive tabs, sometimes to once per second), ticks fire late. If you add a fixed 50 every ' +
-        'time regardless of how much real time actually passed, every late tick leaves the displayed time ' +
-        'permanently behind reality, and the error compounds tick after tick — after a few minutes you could ' +
-        'be seconds off. Recomputing from `Date.now()` every tick means a late tick just produces one bigger, ' +
-        'still-accurate jump instead of baking in permanent error.',
+        'A React Hook that lets a component "remember" a value between renders, and re-render itself ' +
+        'whenever that value changes. `const [elapsed, setElapsed] = useState(0)` — `elapsed` is the current ' +
+        'value (starts at 0), `setElapsed` is the only way to change it. Calling `setElapsed(newValue)` tells ' +
+        'React "re-run this component with the new value" — that re-run is what actually updates what you see ' +
+        'on screen.',
     },
     {
-      question:
-        'Why use useRef for startTime/accumulated instead of useState?',
+      question: 'What is useRef, and how is it different from useState?',
       answer:
-        'Because changing them should never, by itself, cause a re-render — only the interval\'s own periodic ' +
-        '`setElapsed` call should update the screen. If `startTime`/`accumulated` were state, every start/' +
-        'pause/resume would trigger an extra render carrying no new *displayed* information (the display value ' +
-        'is `elapsed`, not these bookkeeping numbers). More subtly: refs update synchronously and are readable ' +
-        'immediately inside the same function (e.g. `pause()` reads `startTimeRef.current` right after a prior ' +
-        'assignment in the same tick), whereas state updates are asynchronous/batched — using state here would ' +
-        'risk reading a stale value inside the same event handler.',
+        'Both let a value survive across re-renders (a plain variable inside the component would reset every ' +
+        'time). The difference: changing a ref does NOT cause a re-render, and you read/write it through ' +
+        '`.current` (`myRef.current`) instead of a `[value, setValue]` pair. Rule of thumb: if the value ' +
+        'should show up on screen, use `useState`. If it\'s just bookkeeping the component needs to remember ' +
+        '(like "which interval is currently running" or "what timestamp did we start at"), use `useRef` — ' +
+        'this stopwatch uses refs for exactly that reason (see the questions below).',
     },
     {
-      question:
-        'What would go wrong if the useEffect cleanup (clearInterval on unmount) were missing?',
+      question: 'What is setTimeout?',
       answer:
-        'If the user navigates away (or the component is conditionally unmounted, e.g. switching tabs in this ' +
-        'very app) while the stopwatch is running, the interval keeps firing against a component instance that ' +
-        'no longer exists. Each tick calls setElapsed on unmounted state — pure wasted CPU work at best; in ' +
-        'stricter setups (or older React versions) it also logs a "state update on an unmounted component" ' +
-        'warning. It\'s also a genuine (if small) memory leak: the interval, and everything its closure holds ' +
-        'onto, is kept alive by the timer system indefinitely.',
+        'A built-in JavaScript function that runs a piece of code ONCE, after waiting a given number of ' +
+        'milliseconds. `setTimeout(() => console.log(\'hi\'), 1000)` waits about 1 second, prints "hi", and ' +
+        'then it\'s done — it does not repeat.',
     },
     {
-      question:
-        'Why does `pause()` add `Date.now() - startTimeRef.current` into `accumulatedRef` instead of just leaving `elapsed` as the paused total?',
+      question: 'What is setInterval, and how is it different from setTimeout?',
       answer:
-        '`elapsed` (state) is a *display* value the last tick happened to leave it at — it\'s not guaranteed to ' +
-        'be perfectly in sync with the exact moment pause() runs, since pause() can execute between ticks. ' +
-        '`accumulatedRef` is deliberately recomputed from the authoritative source (now minus this run\'s ' +
-        'startTime) at the exact instant of pausing, then `elapsed` is set to match it. This guarantees the ' +
-        'banked total is always exact, never off by up to one tick interval (50ms here) the way trusting the ' +
-        'last-rendered `elapsed` value would be.',
+        'Same idea as `setTimeout`, but it repeats — it keeps running the code again and again, every X ' +
+        'milliseconds, forever, until something explicitly stops it. `setInterval(() => console.log(\'tick\'), ' +
+        '1000)` prints "tick" every second, endlessly. This stopwatch uses `setInterval` (not `setTimeout`) ' +
+        'because it needs to keep updating the displayed time repeatedly while running, not just once.',
     },
     {
-      question:
-        'The Lap button is disabled both before starting and while paused. Why not just let it record whatever `elapsed` currently is in either state?',
+      question: 'What is clearInterval, and why is it needed?',
       answer:
-        'A lap only means something relative to a run in progress — recording a lap at 0 before starting is ' +
-        'meaningless, and recording one while paused would just duplicate whatever the most recent lap (or the ' +
-        'paused total) already shows, since the number isn\'t moving. Disabling it is the same "communicate the ' +
-        'boundary through the UI, don\'t let the user discover a no-op by trial and error" principle as ' +
-        'disabling +/- at the Counter\'s min/max.',
+        '`setInterval(...)` gives back an ID number that identifies that specific running timer. ' +
+        '`clearInterval(id)` uses that ID to stop it. If you never call `clearInterval`, the interval keeps ' +
+        'firing forever — even after the component using it is gone from the screen — which wastes work and, ' +
+        'in this stopwatch, would mean a "ghost" timer still trying to update state that nothing is showing ' +
+        'anymore.',
     },
     {
-      question:
-        'What was the actual test-writing gotcha here, and why does it matter beyond this one component?',
+      question: 'What is useEffect "cleanup", and why does this stopwatch use it?',
       answer:
-        'The first version of the test suite used `vi.useFakeTimers()` with no arguments, and every single test ' +
-        'timed out — not because the component was broken, but because React 18\'s internal scheduler leans on ' +
-        'browser timing primitives (MessageChannel, requestAnimationFrame) to flush state updates, and the ' +
-        'blanket fake-timers call fakes those too, starving React of the ability to process anything, including ' +
-        'the initial click. The fix was to fake only the specific APIs under test (`Date`, `setInterval`/' +
-        '`clearInterval`) via `toFake: [...]`. This generalizes to any test involving both `userEvent` clicks ' +
-        'AND fake timers in React 18+ — it\'s one of the first things to check when such a test mysteriously ' +
-        'hangs instead of failing with a clear assertion error.',
+        'When you write `useEffect(() => { ...setup...; return () => { ...cleanup... } }, [])`, the function ' +
+        'you `return` is the cleanup — React calls it automatically right before the component is removed from ' +
+        'the screen (or before the effect re-runs, if its dependencies changed). This stopwatch\'s cleanup ' +
+        'calls `clearInterval` there, which guarantees the running timer actually gets stopped whenever the ' +
+        'component disappears — you don\'t have to remember to do it manually everywhere the component might ' +
+        'go away.',
+    },
+    {
+      question: 'What is Date.now()?',
+      answer:
+        'A built-in JavaScript function that returns the current time as a plain number — milliseconds since ' +
+        'January 1, 1970. On its own that number isn\'t very meaningful, but subtracting two readings of it ' +
+        'tells you exactly how much real time passed between them: `Date.now() - startTime` is "how many ' +
+        'milliseconds have elapsed since I recorded startTime".',
+    },
+    {
+      question: 'What does "asynchronous" mean, and how do timers relate to it?',
+      answer:
+        '"Asynchronous" means something is scheduled to happen later, without freezing the rest of the program ' +
+        'while it waits. Calling `setInterval(fn, 50)` doesn\'t pause your code for 50ms — it just tells the ' +
+        'browser "call this function every 50ms from now on" and immediately moves on to the next line. The ' +
+        'browser then calls `fn` on its own schedule, in the background, independent of whatever else your ' +
+        'code is doing.',
     },
   ],
 }

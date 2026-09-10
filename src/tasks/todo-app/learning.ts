@@ -169,123 +169,71 @@ const activeCount = useMemo(
 
   interviewQuestions: [
     {
-      question:
-        'Why does using the functional form of setState (setTodos(prev => ...)) let you drop `todos` from a useCallback\'s dependency array — and why does that matter for React.memo downstream?',
+      question: 'What is state in React (useState)?',
       answer:
-        'The updater function React passes you always receives the freshest state as its argument, ' +
-        'regardless of what "todos" was captured as in that render\'s closure. So the callback ' +
-        'body never actually reads the outer `todos` variable — it has nothing to depend on. ' +
-        'That means useCallback\'s dependency array can be just `[setTodos]`, and since setState ' +
-        'setters are guaranteed stable by React forever, the callback itself is created once and ' +
-        'never changes identity. That stable identity is exactly what a prop needs to be for ' +
-        'React.memo\'s shallow comparison to actually skip a re-render — a callback recreated ' +
-        'every render would make memo useless no matter how carefully you write it.',
+        'State is a value a component remembers, that can change over time and makes the component ' +
+        'redraw itself when it does. `const [todos, setTodos] = useState([])` — `todos` is the current ' +
+        'value, `setTodos` is the only correct way to change it. Calling `setTodos(newList)` tells React ' +
+        '"re-run this component with the new list" — that\'s what actually updates the screen.',
     },
     {
-      question:
-        'React.memo does a shallow prop comparison. The `todo` object is recreated on every toggle via `.map()` — why does that NOT cause every row to re-render, only the toggled one?',
+      question: 'What is useCallback?',
       answer:
-        '`.map()` builds a new array, but it only builds a *new object* for the element whose ' +
-        'callback returned something different — every other element is returned as-is, so it ' +
-        'keeps the exact same object reference it had before. React.memo compares each prop with ' +
-        '`Object.is`, so for the 99 rows whose todo object reference is unchanged, `todo` compares ' +
-        'equal, and combined with stable callback props (see the previous answer) every prop is ' +
-        'unchanged — memo bails out for those rows. Only the row whose object was actually replaced ' +
-        're-renders.',
+        'A Hook that keeps the SAME function reference across re-renders, as long as its dependency ' +
+        'array hasn\'t changed. Normally, writing `const toggle = (id) => {...}` inside a component ' +
+        'creates a brand-new function every single render. `useCallback(fn, deps)` returns the exact ' +
+        'same function object as last time when `deps` are unchanged, instead of a new one. This mostly ' +
+        'matters when you pass that function down as a prop to a child wrapped in `React.memo` (see below).',
     },
     {
-      question:
-        'Why use a Set for selectedIds instead of an array? What would checking "is this id selected" cost with each data structure, both per-check and across the whole render?',
+      question: 'What is useMemo?',
       answer:
-        'Set.has(id) is O(1) average case (hash lookup). Array.includes(id) is O(n) — it walks the ' +
-        'array. That check runs once per visible row, every render (selected={selectedIds.has(todo.id)}), ' +
-        'so with an array you\'d be doing n lookups of O(n) each — O(n²) total per render just to ' +
-        'figure out who\'s selected, which gets noticeably slow well before 10,000 rows. A Set keeps ' +
-        'that at O(n) total.',
+        'A Hook that remembers the RESULT of a calculation, and only recalculates it when its ' +
+        'dependencies change. `const filteredTodos = useMemo(() => todos.filter(...), [todos, filter])` ' +
+        '— instead of re-filtering the list on every single render (even ones unrelated to `todos` or ' +
+        '`filter`), it reuses the last result until one of those two actually changes.',
     },
     {
-      question:
-        'What\'s the actual difference between useMemo and useCallback under the hood — and when would using one instead of the other be simply wrong, not just a style choice?',
+      question: 'What is React.memo, and what does it do?',
       answer:
-        'useCallback(fn, deps) is literally useMemo(() => fn, deps) — it memoizes a function value. ' +
-        'useMemo memoizes the *result* of calling a function. Using useMemo to "memoize a callback" ' +
-        '(useMemo(() => () => doThing(), deps)) works but is just useCallback spelled out the long ' +
-        'way — that\'s a style nit, not a bug. The genuinely wrong swap is the other direction: using ' +
-        'useCallback where you actually want a computed value, e.g. useCallback(() => expensiveFilter(list), ' +
-        '[list]) gives you back a *function*, not the filtered list — you\'d have to call it every ' +
-        'render anyway, defeating the memoization entirely. That should have been useMemo(() => ' +
-        'expensiveFilter(list), [list]).',
+        'A wrapper you put around a component — `export default memo(TodoItem)` — that tells React ' +
+        '"before re-rendering this component again, compare its new props to its old props; if they\'re ' +
+        'all the same, skip the re-render entirely." It compares props with a shallow check (`===` on ' +
+        'each prop), so it only actually helps if the props you pass in (including any functions) stay ' +
+        'the same reference when nothing relevant changed — which is what useCallback above is for.',
     },
     {
-      question:
-        '`bulkDelete` has `selectedIds` in its dependency array, but `toggleComplete` doesn\'t need `todos` in its. What\'s the structural difference that explains this?',
+      question: 'What is a "controlled input"?',
       answer:
-        '`toggleComplete` only ever needs the *previous todos array* to compute the next one, and ' +
-        'the setState updater callback hands that to it directly — so it never reads the outer ' +
-        '`todos` closure variable at all. `bulkDelete` is different: it needs to filter todos by ' +
-        '"is this id in selectedIds", and `selectedIds` is a *second, independent* piece of state ' +
-        'that the setTodos updater has no access to (setState only gives you the previous value of ' +
-        'the state you\'re updating, not other state). So `bulkDelete` has to close over the current ' +
-        '`selectedIds` from the render — which means it genuinely must be in the dependency array, ' +
-        'and the callback\'s identity legitimately changes whenever the selection changes.',
+        'An input whose value is driven entirely by React state, not the browser\'s own memory of what ' +
+        'was typed. The "new todo" text box here uses `value={draft}` and updates `draft` via ' +
+        '`onChange` — the box never has a value of its own, it just always shows whatever `draft` ' +
+        'currently is.',
     },
     {
-      question:
-        'This app persists to localStorage on every state change via useEffect. What happens with rapid updates (e.g. holding down "delete"), and how would you debounce the writes?',
+      question: 'What is localStorage?',
       answer:
-        'Each state update runs the effect again, so rapid updates mean rapid, redundant ' +
-        'JSON.stringify + localStorage.setItem calls — wasted work, though not usually visible to ' +
-        'the user since it\'s synchronous and cheap at small scale. To debounce: keep a ref to a ' +
-        'timeout id inside the hook, clear it on every effect run, and schedule the actual write ' +
-        '250-500ms out; also add a cleanup that flushes immediately on unmount so the very last ' +
-        'state change isn\'t lost if the component unmounts mid-debounce.',
+        'A small key-value storage built into the browser that persists even after the tab or browser ' +
+        'is closed (unlike normal JS variables, which reset on every page reload). You can only store ' +
+        'strings in it, so objects/arrays need `JSON.stringify` to save and `JSON.parse` to read back — ' +
+        'which is exactly what the `useLocalStorage` hook in this task does automatically.',
     },
     {
-      question:
-        'How would you sync todos across two open browser tabs? (hint: the `storage` event fires in *other* tabs, not the one that wrote — or BroadcastChannel)',
+      question: 'What is a Set in JavaScript, and how is it different from an Array?',
       answer:
-        'Add a `window.addEventListener(\'storage\', handler)` in the hook — the browser fires this ' +
-        'event on every *other* tab/window sharing the same origin whenever localStorage changes ' +
-        '(the tab that made the change does not get its own event). The handler checks ' +
-        '`event.key === key`, parses `event.newValue`, and calls setValue with it. BroadcastChannel ' +
-        'is the more modern alternative — you\'d post a message after every write and every tab ' +
-        '(including a shared "channel", not localStorage\'s storage event) listens and updates its ' +
-        'own state; it also works for state that isn\'t persisted to localStorage at all.',
+        'A `Set` is a collection that only stores unique values and is built to answer "is X in here?" ' +
+        'very fast (`set.has(x)`). An `Array` can hold duplicates and checking "is X in here?" ' +
+        '(`array.includes(x)`) has to walk through every item one by one. This task uses a `Set` for ' +
+        '`selectedIds` (which todos are checked for bulk actions) specifically because that "is this ' +
+        'one selected?" check happens for every row, every render.',
     },
     {
-      question:
-        'This list re-renders the whole `<ul>` on filter change. How would you virtualize it if there were 10,000 todos?',
+      question: 'What does a "functional update" to setState mean — e.g. setTodos(prev => ...)?',
       answer:
-        'Only render the rows currently scrolled into view (plus a small overscan buffer) instead ' +
-        'of all 10,000 <li> elements — a library like @tanstack/react-virtual (or react-window) ' +
-        'measures the scroll container, computes which indices are visible, and renders just those, ' +
-        'positioning them absolutely (or via transform) inside a container sized to the *full* list\'s ' +
-        'height so the scrollbar still behaves correctly. The filtering itself (useMemo over `todos`) ' +
-        'stays exactly the same — virtualization only changes how the *filtered* array gets rendered ' +
-        'to DOM nodes, not how it\'s computed.',
-    },
-    {
-      question:
-        'Where would you put optimistic UI + rollback-on-failure if `todos` were backed by a real API instead of localStorage?',
-      answer:
-        'Update local state immediately (optimistic) inside the mutator — e.g. toggleComplete flips ' +
-        'the todo in state right away — then fire the API call. On failure, revert: either re-apply ' +
-        'the previous state (keep a snapshot before the optimistic update) or re-toggle the specific ' +
-        'field, and surface an error (toast). The tricky part is concurrent optimistic updates on the ' +
-        'same item — snapshot-based rollback ("restore exactly what it was before this specific ' +
-        'mutation") is safer than a blind re-toggle if multiple actions on the same todo can overlap.',
-    },
-    {
-      question:
-        'The mutating-a-copy pattern shows up for both arrays (`[...prev, x]`) and Sets (`new Set(prev)`) here — why does React require a new reference at all instead of just deep-comparing state?',
-      answer:
-        'Deep-comparing on every setState call would mean walking the entire data structure on every ' +
-        'single update just to decide *whether* to re-render — for a large todos array that cost is ' +
-        'paid constantly, on every keystroke and every toggle, even when nothing meaningfully changed. ' +
-        'A reference check (Object.is) is O(1) regardless of how big the structure is. The tradeoff ' +
-        'React makes is: push the cost of "did this change" onto the developer (via the discipline of ' +
-        'always producing a new reference on change, never mutating in place) instead of paying an ' +
-        'unavoidable O(n) tax on every render.',
+        'Instead of `setTodos(someNewValue)`, you pass setTodos a FUNCTION: `setTodos(prev => ...)`. ' +
+        'React calls that function for you and hands it the most up-to-date state as `prev`, then uses ' +
+        'whatever it returns as the new state. This is safer than reading the `todos` variable directly ' +
+        'from inside a handler, especially when multiple updates might happen close together.',
     },
   ],
 }
