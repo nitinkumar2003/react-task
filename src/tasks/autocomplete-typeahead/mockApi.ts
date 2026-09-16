@@ -32,6 +32,11 @@ export function searchItems(
   signal: AbortSignal,
 ): Promise<SearchResult[]> {
   return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'))
+      return
+    }
+
     const latencyMs = 200 + Math.random() * 300
 
     const timeoutId = setTimeout(() => {

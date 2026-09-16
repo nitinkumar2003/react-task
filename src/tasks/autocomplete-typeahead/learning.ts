@@ -18,6 +18,7 @@ const content: LearningContent = {
     'adjusting state during render vs. in an effect',
     'keyboard event handling (onKeyDown, preventDefault)',
     'ARIA combobox/listbox roles',
+    'useRef as a "latest value" mirror to avoid an unwanted effect dependency',
   ],
 
   codeSnippets: [
@@ -133,6 +134,30 @@ setCache((prev) => new Map(prev).set(debouncedQuery, found))`,
         'what\'s on screen, it genuinely is part of the UI\'s state, so it belongs in `useState` — updated ' +
         'immutably (a new `Map`, not `cache.current.set(...)` in place) so React can detect the change.',
     },
+    {
+      title: '6. useRef as a "latest value" mirror — avoiding a dependency that churns',
+      code: `const [cache, setCache] = useState<Map<string, SearchResult[]>>(() => new Map())
+
+// mirror the latest cache into a ref, kept in sync via its own tiny effect
+const cacheRef = useRef(cache)
+useEffect(() => {
+  cacheRef.current = cache
+}, [cache])
+
+useEffect(() => {
+  if (cacheRef.current.has(debouncedQuery)) return   // read the MIRROR, not \`cache\`
+  // ...fetch...
+}, [debouncedQuery])   // <-- cache is NOT a dependency`,
+      explanation:
+        '`setCache` creates a brand-new Map on every successful fetch (immutable update, so React can see the ' +
+        'change). If the fetch effect listed `cache` in its dependency array just to call `.has()` on it, ' +
+        'every successful fetch would itself cause that new Map reference to make the effect tear down and ' +
+        'run again — cleanup calls `abort()` on an already-settled controller, then the new run immediately ' +
+        'bails via the cache check. Harmless today, but wasted work, and a landmine if the effect ever grows a ' +
+        'real side effect. A ref always exposes `.current` as the latest value without being "reactive" — ' +
+        'writing to it doesn\'t trigger a re-render or count as a dependency — so mirroring `cache` into ' +
+        '`cacheRef` via its own effect lets the fetch effect depend on `debouncedQuery` alone.',
+    },
   ],
 
   interviewQuestions: [
@@ -197,6 +222,17 @@ setCache((prev) => new Map(prev).set(debouncedQuery, found))`,
         'suggestion list tell a screen reader "this is a search box with a list of selectable suggestions", so ' +
         'it can announce things like how many options there are and which one is currently highlighted — ' +
         'information a sighted user gets for free just by looking at the highlighted row.',
+    },
+    {
+      question: 'What is `useRef`, and how is it different from `useState`?',
+      answer:
+        'Both persist a value across re-renders of the same component instance. The difference: `setState` ' +
+        'schedules a re-render and the new value is only reliably visible on the NEXT render; `ref.current` ' +
+        'can be read and written at any time, immediately, and changing it does NOT trigger a re-render. Rule ' +
+        'of thumb: if a value is supposed to change what\'s on screen, it\'s state. If it\'s just a place to ' +
+        'stash the latest value of something for imperative code (an effect, an event handler) to read later ' +
+        'without caring about re-rendering, it\'s a ref — like `cacheRef` here, which exists only so the fetch ' +
+        '`useEffect` can read the current cache without that Map reference becoming a dependency.',
     },
   ],
 }

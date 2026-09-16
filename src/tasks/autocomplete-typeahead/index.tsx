@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { searchItems, type SearchResult } from './mockApi'
 import { useDebouncedValue } from './useDebouncedValue'
 import styles from './index.module.css'
@@ -22,6 +22,16 @@ export default function AutocompleteTypeahead() {
   // render attempts concurrent React is allowed to make. Since it affects
   // rendering, it belongs in state.
   const [cache, setCache] = useState<Map<string, SearchResult[]>>(() => new Map())
+  const MAX_CACHE_ENTRIES = 50
+
+  // @@ latest-value ref so the fetch effect below can check "is this already
+  // cached?" without listing `cache` in its dependency array — `cache` gets
+  // a new Map reference on every successful fetch, which would otherwise
+  // make the effect tear down and re-run an extra time after every search.
+  const cacheRef = useRef(cache)
+  useEffect(() => {
+    cacheRef.current = cache
+  }, [cache])
 
   // @@ only the ACTUAL side effect (the network-like call, which needs
   // cleanup/abort) lives in useEffect below. Resetting to idle on an empty
@@ -47,6 +57,7 @@ export default function AutocompleteTypeahead() {
         setHighlightedIndex(-1)
       } else {
         setStatus('loading')
+        setResults([]) // don't leave the PREVIOUS query's results on screen while this one loads
         setFromCache(false)
         setHighlightedIndex(-1)
       }
@@ -55,7 +66,7 @@ export default function AutocompleteTypeahead() {
 
   useEffect(() => {
     if (debouncedQuery === '') return
-    if (cache.has(debouncedQuery)) return // served from cache above — nothing to fetch
+    if (cacheRef.current.has(debouncedQuery)) return // served from cache above — nothing to fetch
 
     const controller = new AbortController()
 
@@ -67,7 +78,17 @@ export default function AutocompleteTypeahead() {
         // ourselves means a stale response can never overwrite fresher
         // results even if that happens.
         if (controller.signal.aborted) return
-        setCache((prev) => new Map(prev).set(debouncedQuery, found))
+        setCache((prev) => {
+          const next = new Map(prev)
+          next.set(debouncedQuery, found)
+          // simple bound so a long session's cache doesn't grow forever —
+          // evict the oldest entry (Map preserves insertion order)
+          if (next.size > MAX_CACHE_ENTRIES) {
+            const oldestKey = next.keys().next().value
+            if (oldestKey !== undefined) next.delete(oldestKey)
+          }
+          return next
+        })
         setResults(found)
         setStatus('success')
         setHighlightedIndex(-1)
@@ -84,23 +105,36 @@ export default function AutocompleteTypeahead() {
     // has already moved past never gets the chance to win a race against a
     // newer one.
     return () => controller.abort()
-  }, [debouncedQuery, cache])
+  }, [debouncedQuery])
 
   const hasDropdownContent =
     results.length > 0 || status === 'loading' || status === 'error'
 
   const selectResult = (result: SearchResult) => {
+    // @@ pre-seed the cache with the selected label so that when
+    // `debouncedQuery` settles to it 300ms from now, it's served from cache
+    // instead of firing a spurious background search for a query the user
+    // has already finished picking from.
+    setCache((prev) => new Map(prev).set(result.label, [result]))
     setQuery(result.label)
     setIsOpen(false)
     setHighlightedIndex(-1)
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown' && !isOpen && results.length > 0) {
-      setIsOpen(true)
+    if (e.key === 'ArrowDown' && !isOpen) {
+      if (hasDropdownContent) setIsOpen(true)
       return
     }
-    if (!isOpen || results.length === 0) return
+    if (!isOpen) return
+
+    if (e.key === 'Escape') {
+      setIsOpen(false)
+      setHighlightedIndex(-1)
+      return
+    }
+
+    if (results.length === 0) return // nothing to navigate while loading/error
 
     switch (e.key) {
       case 'ArrowDown':
@@ -112,14 +146,8 @@ export default function AutocompleteTypeahead() {
         setHighlightedIndex((i) => Math.max(i - 1, 0))
         break
       case 'Enter':
-        if (highlightedIndex >= 0) {
-          e.preventDefault()
-          selectResult(results[highlightedIndex])
-        }
-        break
-      case 'Escape':
-        setIsOpen(false)
-        setHighlightedIndex(-1)
+        e.preventDefault()
+        if (highlightedIndex >= 0) selectResult(results[highlightedIndex])
         break
       default:
         break
@@ -147,15 +175,18 @@ export default function AutocompleteTypeahead() {
           }}
           onKeyDown={handleKeyDown}
           onFocus={() => {
-            if (results.length > 0) setIsOpen(true)
+            if (hasDropdownContent) setIsOpen(true)
           }}
           onBlur={() => {
             // small delay so a click on a dropdown option (see onMouseDown
             // below) still lands before we close the list
-            setTimeout(() => setIsOpen(false), 100)
+            setTimeout(() => {
+              setIsOpen(false)
+              setHighlightedIndex(-1)
+            }, 100)
           }}
         />
-        {status === 'loading' && (
+        {isOpen && status === 'loading' && (
           <span className={styles.spinner} aria-hidden="true" />
         )}
       </div>
@@ -192,7 +223,7 @@ export default function AutocompleteTypeahead() {
       {isOpen && status === 'success' && results.length === 0 && (
         <p className={styles.emptyHint}>No results for "{debouncedQuery}"</p>
       )}
-      {fromCache && status === 'success' && (
+      {isOpen && fromCache && status === 'success' && (
         <p className={styles.cacheHint}>Loaded from cache — no request made.</p>
       )}
     </div>
